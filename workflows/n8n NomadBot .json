@@ -1,0 +1,1192 @@
+{
+  "name": "n8n NomadBot",
+  "nodes": [
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "id": "5a0f3971-ee5f-4bb2-b31a-31a8de942a4f",
+      "name": "Telegram Trigger",
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        0,
+        16
+      ],
+      "webhookId": "c999956c-908b-4883-a9e7-104db50d537e",
+      "credentials": {
+        "telegramApi": {
+          "id": "UVdCFbny4AI4ninX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": false,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ ($json.message.text || '') }}",
+                    "rightValue": "/weather",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    },
+                    "id": "5ff7750a-b322-485d-8de6-7e256b1ba794"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "weather"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "9aa02f32-7c23-4dea-b4dc-419f75e95aae",
+                    "leftValue": "={{ ($json.message.text || '') }}",
+                    "rightValue": "/places",
+                    "operator": {
+                      "type": "string",
+                      "operation": "startsWith"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "places"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "a5f0265c-2c06-4ca3-805c-40a8f5a7c5cf",
+                    "leftValue": "={{ ($json.message.text || '').startsWith('/help') || ($json.message.text || '').startsWith('/start') }}",
+                    "rightValue": "/help",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "help"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "05c8e18a-efa6-4d66-b10a-c3fcc62e8b21",
+                    "leftValue": "={{ !($json.message && $json.message.text) }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "notext"
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra",
+          "ignoreCase": true,
+          "renameFallbackOutput": "ai"
+        }
+      },
+      "id": "c2ae021e-a038-49ee-b8d2-2753abdc32d8",
+      "name": "Command Router",
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        224,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "371e28c2-d1fa-444a-a7e9-d51804939530",
+              "name": "city",
+              "value": "={{ $json.message.text.replace(/^\\/\\w+(@\\w+)?\\s*/, '').trim() }}",
+              "type": "string"
+            },
+            {
+              "id": "afdc782b-a3b0-459b-8b70-ae3abd467a13",
+              "name": "mode",
+              "value": "={{ $json.message.text.toLowerCase().startsWith('/places')? 'places' : 'weather' }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "5b92fd88-3ca9-4a0f-bff5-a2b595a595dd",
+      "name": "Parse Command",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        656,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "27037694-84df-4554-8b47-06b5d715bd72",
+              "leftValue": "={{ $json.city.length > 0 }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "cf707baa-0917-44d0-a681-34390d3e9cd1",
+      "name": "Has City ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        880,
+        -96
+      ]
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "4md2EqNhElY6qz7w",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/4md2EqNhElY6qz7w",
+          "cachedResultName": "city_info_subworkflow"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "city": "={{ $json.city }}",
+            "mode": "={{ $json.mode }}"
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "city",
+              "displayName": "city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            },
+            {
+              "id": "mode",
+              "displayName": "mode",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "options": {}
+      },
+      "id": "a23eee32-ffeb-404f-bc5f-5d7d97d81dca",
+      "name": "Run Lookup",
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        1104,
+        -240
+      ],
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "=📍 {{ $('Parse Command').first().json.city }}\n\n{{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false,
+          "disable_web_page_preview": true
+        }
+      },
+      "id": "d6c029b8-a1e7-4004-8cf9-a0b46b88e640",
+      "name": "Send Lookup Reply",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1328,
+        -336
+      ],
+      "webhookId": "98518fbc-6ef2-4d6d-ba89-a6759480ac89",
+      "credentials": {
+        "telegramApi": {
+          "id": "UVdCFbny4AI4ninX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "Sorry, I couldn't fetch that right now. Please try again in a minute.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "4196da03-0acc-42b9-9b8f-ad739e2b2e12",
+      "name": "Send Lookup Error",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1328,
+        -144
+      ],
+      "webhookId": "9e5531f8-0c15-45d0-b763-d568c760462f",
+      "credentials": {
+        "telegramApi": {
+          "id": "UVdCFbny4AI4ninX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "Please include a city, for example: /weather Tokyo or /places Paris",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "092a9a75-72a1-4839-ae69-86cde1c0c310",
+      "name": "Send Usage Hint",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1104,
+        -80
+      ],
+      "webhookId": "47913d37-bdd4-452a-bb10-7786027b78bc",
+      "credentials": {
+        "telegramApi": {
+          "id": "UVdCFbny4AI4ninX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "Welcome to NomadBot! 🌍 \nHere is what I can do: \n/weather [city] - Get instant weather \n/places [city] - Get instant top places \nOr just ask me anything, like: \"Plan a trip to Tokyo!\"",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "442893e0-9827-4cf1-a867-240cc57d27f4",
+      "name": "Send Welcome & Help Guide",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        496,
+        16
+      ],
+      "webhookId": "f6a690a2-d179-4476-88bc-5fd9b05eeeee",
+      "credentials": {
+        "telegramApi": {
+          "id": "UVdCFbny4AI4ninX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are a travel planner AI.\nThe user will send you a message. Find the cities they want to visit (at most 3).\nOutput ONLY one JSON object, no prose, no conversational text.\nUse this exact format, with one separate entry per city (never put two cities in one entry):\n{\"calls\": [{\"tool\": \"open_meteo\", \"args\": {\"city\": \"CityName\"}}]}\n\n{{ (/\\b(there|same (city|place|trip)|that (city|place|trip)|the trip|my trip|again|day \\d+)\\b/i.test($('Telegram Trigger').first().json.message.text || '') && $('Last Trip').isExecuted && $('Last Trip').first().json.last_destination) ? ('The message refers back to the previous trip. Previous destinations: ' + $('Last Trip').first().json.last_destination + ' (make one separate entry for each city).') : '' }}\n\nIf the message is a general travel question and does not mention a specific city, return this exactly:\n{\"calls\": []}\n\nUser message:\n{{ $('Telegram Trigger').first().json.message.text }}",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "id": "9e8db72c-95a9-4c64-a17e-4192c5e9c98e",
+      "name": "Plan Destinations",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        736,
+        224
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": "openrouter/free",
+        "options": {
+          "temperature": 0
+        }
+      },
+      "id": "e8adf8b2-d9a0-4cc7-915f-a9fbb811bbbc",
+      "name": "OpenRouter Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        736,
+        384
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "2O40lmNwRJwlWW1q",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "beaf0c0b-f594-4afe-be4a-d4d4f4d834b2",
+              "name": "calls",
+              "value": "={{ (() => {   const t = String($json.text || '');   const s = t.indexOf('{');   const e = t.lastIndexOf('}');   if (s < 0 || e <= s) return [];   try {     const p = JSON.parse(t.slice(s, e + 1));     return Array.isArray(p.calls) ? p.calls : [];   } catch (err) {     return [];   } })() }}",
+              "type": "array"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a21944f1-d478-4061-9860-ba86ea7ea92c",
+      "name": "Parse JSON",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1136,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "calls = _items[0][\"json\"].get(\"calls\", [])\nvalid_calls = []\nseen = []\nMAX_CALLS = 3\nBAD = [\"none\", \"null\", \"n/a\", \"na\", \"general\", \"unknown\", \"undefined\", \"nothing\"]\n\nfor call in calls:\n    if not isinstance(call, dict):\n        continue\n    if str(call.get(\"tool\", \"\")) != \"open_meteo\":\n        continue\n    args = call.get(\"args\", {})\n    city = str(args.get(\"city\", \"\")).strip() if isinstance(args, dict) else \"\"\n    if city.lower() in BAD:\n        continue\n    if 0 < len(city) < 50 and city.lower() not in seen:\n        seen.append(city.lower())\n        valid_calls.append({\"json\": {\"city\": city}})\n    if len(valid_calls) >= MAX_CALLS:\n        break\n\nif not valid_calls:\n    return [{\"json\": {\"city\": \"\"}}]\nreturn valid_calls"
+      },
+      "id": "62366fde-3c06-4a06-9a4a-1e43bf988705",
+      "name": "Validate Destinations",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1328,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "fee30bc1-c27e-453e-b129-b42d4ff40b57",
+              "leftValue": "={{ $json.city }}",
+              "rightValue": "",
+              "operator": {
+                "type": "string",
+                "operation": "notEmpty",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "2fce3d01-930a-4e26-bd6e-f7c17be2094d",
+      "name": "Require API Data ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        1520,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=You are NomadBot, a travel and weekend concierge.\nUser request:\n{{ $('Telegram Trigger').first().json.message.text }}\n\nLive API data (JSON, one entry per city):\n{{ $('Combine Cities').isExecuted ? JSON.stringify($('Combine Cities').first().json.nomad_data) : 'No API data needed.' }}\n\nPrevious answer in this chat (use it ONLY for follow-ups such as \"make day 2 cheaper\"; otherwise ignore it):\n{{ $('Last Trip').isExecuted ? ($('Last Trip').first().json.last_itinerary || 'none') : 'none' }}\n\nWrite a fun, day-by-day travel plan based on the user's request.\n\nRules:\n1. If the request is a follow-up about the previous answer, revise or answer from it and keep the same format.\n2. For each city with found = true, write one section. If there are several cities, start each section with the city name on its own line. Under it write the exact line \"Trip essentials\" and \"-\" bullets: country, local language(s), currency with the exchange rate from forex_rates (for example \"Japanese yen, 1 USD = 158.25 JPY\"; if forex_rates is missing give only the currency name; if the currency is the US dollar say no conversion is needed), and the air quality explained in plain words using the European AQI scale (0 to 20 good, 20 to 40 fair, 40 to 60 moderate, 60 to 80 poor, 80 to 100 very poor, above 100 extremely poor). Leave out any bullet whose data is missing. Then a blank line.\n3. Then one block per day, with a blank line between days: the date, one short weather line (min to max in C, rain chance), then 2 to 4 activities, each starting with \"-\". Use the dates from daily_forecast. If a day has no forecast, leave out its weather line. Trip length: use what the user asked for, otherwise 3 days. If the user gives one total number of days for several cities, split those days between the cities and do not repeat any date. If the user gives a number per city, use it for each.\n4. Pick activities from that city's \"attractions\" list first. Every place may appear on ONE day only: never mention the same place on two different days, and never repeat an activity anywhere in the plan. Group places that are close to each other (small dist_m) on the same day. If the list is missing or too short, you may add well-known places, but never state opening hours, prices or ticket details.\n5. For a city with found = false, write one line saying you could not find it. If lookups_failed is above 0, say live data for one city could not be fetched.\n6. Use only numbers from the API data. Never invent figures.\n\nFormat for Telegram: plain text only, no tables, no markdown symbols, no bold, no headings other than the \"Trip essentials\" line.",
+        "messages": {
+          "messageValues": []
+        },
+        "batching": {}
+      },
+      "id": "2ac5f478-49a8-43b4-a52c-14cfb62e9774",
+      "name": "Write Trip Itinerary",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "typeVersion": 1.9,
+      "position": [
+        2080,
+        240
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {
+        "model": "openrouter/free",
+        "options": {
+          "temperature": 0.3
+        }
+      },
+      "id": "c6dfb8c7-f3fa-4af9-b25c-5d7d1a5b160f",
+      "name": "OpenRouter Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenRouter",
+      "typeVersion": 1,
+      "position": [
+        2080,
+        416
+      ],
+      "credentials": {
+        "openRouterApi": {
+          "id": "2O40lmNwRJwlWW1q",
+          "name": "OpenRouter account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "Sorry, the free AI model is not answering right now. Please try again in a minute.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "id": "aeb6569b-9604-4398-9a52-ca64fb43afe4",
+      "name": "Send AI Error Message",
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2480,
+        320
+      ],
+      "webhookId": "b40eefef-c455-433f-aa92-964d400914d3",
+      "credentials": {
+        "telegramApi": {
+          "id": "UVdCFbny4AI4ninX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1ml-jk8Ncu33jip9EAmVgBjUqe3DfnlKzGY74Oz_inbo",
+          "mode": "list",
+          "cachedResultName": "NomadBot Trips",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ml-jk8Ncu33jip9EAmVgBjUqe3DfnlKzGY74Oz_inbo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ml-jk8Ncu33jip9EAmVgBjUqe3DfnlKzGY74Oz_inbo/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{ $now }}",
+            "Chat ID": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+            "Destination": "={{ $('Validate Destinations').isExecuted ? ($('Validate Destinations').all().map(i => i.json.city).filter(c => c).join(', ') || 'General') : 'General' }}",
+            "Itinerary": "={{ $json.text }} "
+          },
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Chat ID",
+              "displayName": "Chat ID",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Destination",
+              "displayName": "Destination",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Itinerary",
+              "displayName": "Itinerary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "id": "ca9ac40d-6536-40bc-9127-0676e8eba9cb",
+      "name": "Save Trip Log",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        2480,
+        112
+      ],
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "j6lgX4pzzKZn8bTX",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "# Telegram allows max 4096 characters per message.\n# Split the itinerary into chunks and output one item per chunk.\nMAX = 4000\ntext = str(_items[0][\"json\"].get(\"text\") or _items[0][\"json\"].get(\"output\") or \"\")\nif not text.strip():\n    text = \"Sorry, I could not generate an itinerary. Please try again.\"\n\nchunks = []\nrest = text\nwhile len(rest) > MAX:\n    # Prefer cutting at a line break, then a space, otherwise hard cut\n    cut = rest.rfind(\"\\n\", 0, MAX)\n    if cut < MAX // 2:\n        cut = rest.rfind(\" \", 0, MAX)\n    if cut < MAX // 2:\n        cut = MAX\n    chunks.append(rest[:cut])\n    rest = rest[cut:].lstrip()\nif rest:\n    chunks.append(rest)\n\nreturn [{\"json\": {\"text\": chunk}} for chunk in chunks]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2672,
+        224
+      ],
+      "id": "0819e8c1-47ca-4c6f-9a3c-a597ac92d22e",
+      "name": "Split Long Message"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "={{ $json.text }}",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2864,
+        224
+      ],
+      "id": "84e2f01b-292a-4a4d-a089-a399792b38bd",
+      "name": "Send Itinerary",
+      "webhookId": "3bb3efd7-6e27-4d9f-b290-da5e48c28ed3",
+      "credentials": {
+        "telegramApi": {
+          "id": "UVdCFbny4AI4ninX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "I couldn't find that city or fetch its data. Please check the spelling and try again.",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2320,
+        64
+      ],
+      "id": "2844d8af-ac85-49aa-affa-eac513732ccf",
+      "name": "Send City Not Found",
+      "webhookId": "2711f988-5d08-4f95-a224-fe5731ba9568",
+      "credentials": {
+        "telegramApi": {
+          "id": "UVdCFbny4AI4ninX",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "workflowId": {
+          "__rl": true,
+          "value": "Kw0llsfumFkPK7jm",
+          "mode": "list",
+          "cachedResultUrl": "/workflow/Kw0llsfumFkPK7jm",
+          "cachedResultName": "city_data_subworkflow"
+        },
+        "workflowInputs": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "city": "={{ $json.city }}"
+          },
+          "matchingColumns": [
+            "city"
+          ],
+          "schema": [
+            {
+              "id": "city",
+              "displayName": "city",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "canBeUsedToMatch": true,
+              "type": "string",
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": true
+        },
+        "mode": "each",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.executeWorkflow",
+      "typeVersion": 1.4,
+      "position": [
+        1760,
+        48
+      ],
+      "id": "74f7894e-34a2-4a77-af6c-65533aeb9b18",
+      "name": "Run City Data",
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "cities = []\nfound = 0\nfailed = 0\nfor item in _items:\n    j = item.get(\"json\", {})\n    nd = j.get(\"nomad_data\") if isinstance(j, dict) else None\n    if isinstance(nd, dict):\n        cities.append(nd)\n        if nd.get(\"found\"):\n            found += 1\n    else:\n        failed += 1\n\nreturn [{\"json\": {\n    \"nomad_data\": {\"cities\": cities, \"lookups_failed\": failed},\n    \"any_found\": found > 0,\n    \"found_count\": found\n}}]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1936,
+        48
+      ],
+      "id": "c9e9a916-18ea-4f6d-b594-45b92395efc3",
+      "name": "Combine Cities"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "3a8e7ad4-1d58-46d9-bf17-78e85a98af25",
+              "leftValue": "={{ $json.any_found }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        2112,
+        48
+      ],
+      "id": "016fa290-fb46-42e7-a9a1-bfb5c852beb2",
+      "name": "Any City Found ?"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1ml-jk8Ncu33jip9EAmVgBjUqe3DfnlKzGY74Oz_inbo",
+          "mode": "list",
+          "cachedResultName": "NomadBot Trips",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ml-jk8Ncu33jip9EAmVgBjUqe3DfnlKzGY74Oz_inbo/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1ml-jk8Ncu33jip9EAmVgBjUqe3DfnlKzGY74Oz_inbo/edit#gid=0"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "Chat ID",
+              "lookupValue": "={{ $('Telegram Trigger').first().json.message.chat.id }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        400,
+        224
+      ],
+      "id": "f422078a-ceb3-4687-bed6-839da5f41a11",
+      "name": "Load History",
+      "alwaysOutputData": true,
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "j6lgX4pzzKZn8bTX",
+          "name": "Google Sheets account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "rows = [i.get(\"json\", {}) for i in _items if isinstance(i.get(\"json\", {}), dict)]\nrows = [r for r in rows if str(r.get(\"Itinerary\") or \"\").strip()]\n\nlast_text = \"\"\nlast_dest = \"\"\nif rows:\n    last_text = str(rows[-1].get(\"Itinerary\") or \"\").strip()[:1800]\n    for r in reversed(rows):\n        d = str(r.get(\"Destination\") or \"\").strip()\n        if d and d != \"General\":\n            last_dest = d\n            break\n\nreturn [{\"json\": {\n    \"has_history\": bool(rows),\n    \"last_destination\": last_dest,\n    \"last_itinerary\": last_text\n}}]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        560,
+        224
+      ],
+      "id": "a8189542-91b2-4528-af63-ee0e9533baaf",
+      "name": "Last Trip"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "Planning your trip, this takes about 15 seconds...",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        224,
+        224
+      ],
+      "id": "6c7e8003-d16d-4766-8314-243cad645184",
+      "name": "Send Typing",
+      "webhookId": "1097c512-22cf-47c6-a61d-7b8c18daefae",
+      "credentials": {
+        "telegramApi": {
+          "id": "UVdCFbny4AI4ninX",
+          "name": "Telegram account"
+        }
+      },
+      "onError": "continueRegularOutput"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $('Telegram Trigger').first().json.message.chat.id }}",
+        "text": "I can only read text messages for now. Try: Plan 3 days in Lisbon",
+        "additionalFields": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        736,
+        48
+      ],
+      "id": "dc9f7601-94ec-4302-98d2-1ca63fca878d",
+      "name": "Send Text Only Notice",
+      "webhookId": "7b6a4397-da4b-4f51-9293-c0130d4c28e9",
+      "credentials": {
+        "telegramApi": {
+          "id": "UVdCFbny4AI4ninX",
+          "name": "Telegram account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Command Router",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Command Router": {
+      "main": [
+        [
+          {
+            "node": "Parse Command",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Parse Command",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Welcome & Help Guide",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Text Only Notice",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Typing",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse Command": {
+      "main": [
+        [
+          {
+            "node": "Has City ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has City ?": {
+      "main": [
+        [
+          {
+            "node": "Run Lookup",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Usage Hint",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Lookup": {
+      "main": [
+        [
+          {
+            "node": "Send Lookup Reply",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send Lookup Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Plan Destinations": {
+      "main": [
+        [
+          {
+            "node": "Parse JSON",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Write Trip Itinerary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Plan Destinations",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse JSON": {
+      "main": [
+        [
+          {
+            "node": "Validate Destinations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate Destinations": {
+      "main": [
+        [
+          {
+            "node": "Require API Data ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Require API Data ?": {
+      "main": [
+        [
+          {
+            "node": "Run City Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Write Trip Itinerary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Trip Itinerary": {
+      "main": [
+        [
+          {
+            "node": "Save Trip Log",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Split Long Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send AI Error Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "OpenRouter Chat Model1": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Write Trip Itinerary",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Split Long Message": {
+      "main": [
+        [
+          {
+            "node": "Send Itinerary",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run City Data": {
+      "main": [
+        [
+          {
+            "node": "Combine Cities",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Cities": {
+      "main": [
+        [
+          {
+            "node": "Any City Found ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Any City Found ?": {
+      "main": [
+        [
+          {
+            "node": "Write Trip Itinerary",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Send City Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Load History": {
+      "main": [
+        [
+          {
+            "node": "Last Trip",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Last Trip": {
+      "main": [
+        [
+          {
+            "node": "Plan Destinations",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Typing": {
+      "main": [
+        [
+          {
+            "node": "Load History",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "d0985592-651e-43aa-bc2c-162b30326dd8",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "4844245d36483eec4763d5f6a03c45480b51bb6c261b55d036d494767631f354"
+  },
+  "nodeGroups": [],
+  "id": "csLDVzpqDtTGTqIV",
+  "tags": []
+}

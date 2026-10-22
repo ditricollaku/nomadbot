@@ -1,0 +1,507 @@
+{
+  "name": "city_data_subworkflow",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "city"
+            }
+          ]
+        }
+      },
+      "id": "7d4816cd-f97b-4ff1-b958-a4ec2e2206a4",
+      "name": "When Executed by Another Workflow",
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1136,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "has-city-check",
+              "leftValue": "={{ (() => { const c = String($json.city ?? '').trim(); return c !== '' && c.toLowerCase() !== 'null' && c.toLowerCase() !== 'undefined'; })() }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "ac2251c6-40f7-4b7a-bda2-61636824a5ab",
+      "name": "Has City ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -928,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://geocoding-api.open-meteo.com/v1/search?name={{ encodeURIComponent($json.city) }}&count=1&language=en&format=json",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "bbfd0775-6658-4b1b-9b80-50f77438497f",
+      "name": "Geocode City",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -672,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify({ nomad_data: { city: $('When Executed by Another Workflow').first().json.city ?? null, found: false } }) }}",
+        "options": {}
+      },
+      "id": "1db620f7-05ab-4bee-8ab3-abf8e3739b4a",
+      "name": "City Not Found",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -528,
+        160
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ (() => {\n  const r = ($json.results && $json.results[0]) || {};\n  return JSON.stringify({\n    city: $('When Executed by Another Workflow').first().json.city,\n    lat: r.latitude, lon: r.longitude,\n    country_code: r.country_code, country: r.country, timezone: r.timezone\n  });\n})() }}",
+        "options": {}
+      },
+      "id": "2100164e-ed3f-4462-9599-1a60e9384f33",
+      "name": "Pick Place",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        -496,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 3
+          },
+          "conditions": [
+            {
+              "id": "1ac0667d-df9b-4a1f-87b0-44e415003dc4",
+              "leftValue": "={{ !!$json.lat }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "89cf7152-05a9-451c-885e-5ded883e1067",
+      "name": "Place Found ?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.3,
+      "position": [
+        -352,
+        -32
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.restcountries.com/countries/v5/codes.alpha_2/{{ $json.country_code }}?response_fields=names.common,capitals,languages,currencies,codes.alpha_2",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "5c7884ba-a99c-4449-bdd1-a2e3a4b1c2d3",
+      "name": "RestCountries API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        -80
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "LnGCoqm2LZBt5amj",
+          "name": "RestCountries v5"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "d = _items[0][\"json\"]\ncode = \"\"\ntry:\n    obj = ((d.get(\"data\") or {}).get(\"objects\") or [{}])[0]\n    curs = obj.get(\"currencies\")\n    if isinstance(curs, dict):\n        for k, v in curs.items():\n            c = \"\"\n            if isinstance(v, dict):\n                c = str(v.get(\"code\") or \"\")\n            code = (c or str(k)).strip().upper()\n            break\n    elif isinstance(curs, list) and curs:\n        v = curs[0]\n        if isinstance(v, dict):\n            code = str(v.get(\"code\") or v.get(\"iso4217\") or v.get(\"alpha_3\") or \"\").strip().upper()\n        else:\n            code = str(v).strip().upper()\nexcept Exception:\n    code = \"\"\n\nif len(code) != 3 or not code.isalpha():\n    code = \"\"\n\nout = dict(d)\nout[\"currency_code\"] = code\nout[\"fx_symbols\"] = code if code and code != \"USD\" else \"EUR\"\nreturn [{\"json\": out}]"
+      },
+      "id": "45b69bd3-14a8-46ed-a364-bf6316cfa0ab",
+      "name": "Pick Currency",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        160,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.frankfurter.dev/v1/latest?base=USD&symbols={{ $json.fx_symbols }}",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "e65f1fbb-c578-4b76-8655-ab69c9ae2f2c",
+      "name": "Frankfurter API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        352,
+        -80
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/forecast?latitude={{ $json.lat }}&longitude={{ $json.lon }}&current=temperature_2m,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=7&timezone=auto",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "3c7d30c7-e3d7-4537-aec3-171db17b4863",
+      "name": "Weather Forecast",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        64
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://air-quality-api.open-meteo.com/v1/air-quality?latitude={{ $json.lat }}&longitude={{ $json.lon }}&current=european_aqi,pm2_5",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "628beef2-e5c1-4718-b32f-d5dd2dc96f55",
+      "name": "Air Quality API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        208
+      ]
+    },
+    {
+      "parameters": {
+        "url": "=https://api.opentripmap.com/0.1/en/places/radius?radius=8000&lon={{ $json.lon }}&lat={{ $json.lat }}&kinds=interesting_places&rate=2&format=json&limit=30",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpQueryAuth",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "39b30359-e721-421b-ab54-0ca342d681d4",
+      "name": "Nearby Attractions",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        0,
+        384
+      ],
+      "alwaysOutputData": true,
+      "credentials": {
+        "httpQueryAuth": {
+          "id": "rypzMKLyvUMPFmBV",
+          "name": "OpenTripMap"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "numberInputs": 5
+      },
+      "id": "b9f52e19-e770-4445-8071-9a48cf7dc00f",
+      "name": "Gather Replies",
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        592,
+        -16
+      ]
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "result = {}\nplaces = []\n\ndef name_of(x):\n    if isinstance(x, str):\n        return x\n    if isinstance(x, dict):\n        for k in (\"name\", \"english_name\", \"english\", \"name_english\", \"label\", \"common\"):\n            v = x.get(k)\n            if isinstance(v, str) and v:\n                return v\n            if isinstance(v, dict):\n                for kk in (\"english\", \"common\", \"en\"):\n                    if isinstance(v.get(kk), str) and v.get(kk):\n                        return v.get(kk)\n        names = x.get(\"names\")\n        if isinstance(names, dict):\n            for kk in (\"english\", \"common\", \"en\"):\n                if isinstance(names.get(kk), str) and names.get(kk):\n                    return names.get(kk)\n    return None\n\ndef rate_num(v):\n    s = str(v or \"0\").lower().replace(\"h\", \"\")\n    try:\n        return int(s)\n    except ValueError:\n        return 0\n\nfor item in _items:\n    data = item.get(\"json\", {})\n    if not isinstance(data, dict):\n        continue\n\n    inner = data.get(\"data\")\n    if \"xid\" in data:\n        # OpenTripMap place (one item per place)\n        nm = str(data.get(\"name\") or \"\").strip()\n        if nm:\n            kinds = str(data.get(\"kinds\") or \"\").split(\",\")[:2]\n            dist = data.get(\"dist\")\n            places.append({\n                \"name\": nm,\n                \"type\": \", \".join(k.replace(\"_\", \" \") for k in kinds if k),\n                \"rate\": rate_num(data.get(\"rate\")),\n                \"dist_m\": round(dist) if isinstance(dist, (int, float)) else None,\n            })\n\n    elif isinstance(inner, dict) and isinstance(inner.get(\"objects\"), list):\n        objs = inner[\"objects\"]\n        c = objs[0] if objs else {}\n        result[\"country\"] = (c.get(\"names\") or {}).get(\"common\")\n        result[\"currency_code\"] = data.get(\"currency_code\")\n        caps = c.get(\"capitals\") or []\n        result[\"capital\"] = name_of(caps[0]) if caps else None\n\n        langs = c.get(\"languages\") or []\n        if isinstance(langs, dict):\n            langs = list(langs.values())\n        result[\"languages\"] = [n for n in (name_of(l) for l in langs) if n]\n\n        curs = c.get(\"currencies\") or {}\n        out = []\n        if isinstance(curs, dict):\n            for code, v in curs.items():\n                out.append(name_of(v) or str(code))\n        elif isinstance(curs, list):\n            for v in curs:\n                n = name_of(v)\n                if n:\n                    out.append(n)\n        result[\"currencies\"] = out\n\n    elif \"daily\" in data:\n        cur = data.get(\"current\") or {}\n        d = data.get(\"daily\") or {}\n        result[\"temp_now_c\"] = cur.get(\"temperature_2m\")\n        result[\"feels_like_c\"] = cur.get(\"apparent_temperature\")\n        days = d.get(\"time\") or []\n        mins = d.get(\"temperature_2m_min\") or []\n        maxs = d.get(\"temperature_2m_max\") or []\n        rain = d.get(\"precipitation_probability_max\") or []\n        forecast = []\n        for i in range(len(days)):\n            forecast.append({\n                \"date\": days[i],\n                \"min_c\": mins[i] if i < len(mins) else None,\n                \"max_c\": maxs[i] if i < len(maxs) else None,\n                \"rain_pct\": rain[i] if i < len(rain) else None,\n            })\n        result[\"daily_forecast\"] = forecast\n\n    elif \"european_aqi\" in (data.get(\"current\") or {}):\n        result[\"european_aqi\"] = data[\"current\"].get(\"european_aqi\")\n        result[\"pm2_5\"] = data[\"current\"].get(\"pm2_5\")\n\n    elif \"rates\" in data:\n        result[\"forex_base\"] = data.get(\"base\")\n        result[\"forex_rates\"] = data.get(\"rates\")\n\nif places:\n    places.sort(key=lambda p: (-p[\"rate\"], p[\"dist_m\"] if p[\"dist_m\"] is not None else 10**9))\n    seen = []\n    top = []\n    for p in places:\n        key = p[\"name\"].strip().lower()\n        if key in seen:\n            continue\n        seen.append(key)\n        top.append({\"name\": p[\"name\"], \"type\": p[\"type\"], \"dist_m\": p[\"dist_m\"]})\n        if len(top) >= 12:\n            break\n    result[\"attractions\"] = top\n\nreturn [{\"json\": {\"nomad_data\": result}}]"
+      },
+      "id": "58f127e7-4f43-455f-89b0-52d430632a0d",
+      "name": "Merge & Trim JSON",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        784,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ JSON.stringify({ nomad_data: Object.assign({ city: $('Pick Place').first().json.city, found: true }, $json.nomad_data) }) }}",
+        "options": {}
+      },
+      "id": "641214a5-56c1-473a-b108-6c492f81bae9",
+      "name": "Tag City",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        960,
+        16
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Has City ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Has City ?": {
+      "main": [
+        [
+          {
+            "node": "Geocode City",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "City Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode City": {
+      "main": [
+        [
+          {
+            "node": "Pick Place",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Place": {
+      "main": [
+        [
+          {
+            "node": "Place Found ?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Place Found ?": {
+      "main": [
+        [
+          {
+            "node": "RestCountries API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Weather Forecast",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Air Quality API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Nearby Attractions",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "City Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RestCountries API": {
+      "main": [
+        [
+          {
+            "node": "Pick Currency",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Currency": {
+      "main": [
+        [
+          {
+            "node": "Frankfurter API",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Gather Replies",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Frankfurter API": {
+      "main": [
+        [
+          {
+            "node": "Gather Replies",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weather Forecast": {
+      "main": [
+        [
+          {
+            "node": "Gather Replies",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Air Quality API": {
+      "main": [
+        [
+          {
+            "node": "Gather Replies",
+            "type": "main",
+            "index": 3
+          }
+        ]
+      ]
+    },
+    "Nearby Attractions": {
+      "main": [
+        [
+          {
+            "node": "Gather Replies",
+            "type": "main",
+            "index": 4
+          }
+        ]
+      ]
+    },
+    "Gather Replies": {
+      "main": [
+        [
+          {
+            "node": "Merge & Trim JSON",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Merge & Trim JSON": {
+      "main": [
+        [
+          {
+            "node": "Tag City",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "9b355ee8-fd7c-4309-a16c-25f1d0669832",
+  "meta": {
+    "instanceId": "4844245d36483eec4763d5f6a03c45480b51bb6c261b55d036d494767631f354"
+  },
+  "nodeGroups": [],
+  "id": "Kw0llsfumFkPK7jm",
+  "tags": []
+}

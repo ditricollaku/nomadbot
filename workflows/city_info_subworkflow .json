@@ -1,0 +1,349 @@
+{
+  "name": "city_info_subworkflow",
+  "nodes": [
+    {
+      "parameters": {
+        "workflowInputs": {
+          "values": [
+            {
+              "name": "city"
+            },
+            {
+              "name": "mode"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.executeWorkflowTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "5c352484-ccfc-46c0-8fd9-ffff17ac492d",
+      "name": "When Executed by Another Workflow"
+    },
+    {
+      "parameters": {
+        "url": "=https://geocoding-api.open-meteo.com/v1/search?name={{ encodeURIComponent($json.city) }}&count=1&language=en&format=json",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        224,
+        0
+      ],
+      "id": "73502aa8-9643-49ad-8b69-7c93c0f77954",
+      "name": "Geocode City"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ (() => {\n  const r = ($json.results && $json.results[0]) || {};\n  return JSON.stringify({\n    found: !!r.latitude,\n    lat: r.latitude,\n    lon: r.longitude,\n    mode: $('When Executed by Another Workflow').item.json.mode\n  });\n})() }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        448,
+        0
+      ],
+      "id": "d416fd89-0c60-4a32-8858-de6b2465e8e1",
+      "name": "Pick Place"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.found }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "false",
+                      "singleValue": true
+                    },
+                    "id": "7bf25be3-b136-4598-9a13-b1c85a422e0a"
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "notfound"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "83527946-1a25-4a0f-8db8-358387ab2e4c",
+                    "leftValue": "={{ $json.mode }}",
+                    "rightValue": "places",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "places"
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 3
+                },
+                "conditions": [
+                  {
+                    "id": "5f286e00-b65b-4796-8508-6fc4177c7287",
+                    "leftValue": "={{ $json.mode }}",
+                    "rightValue": "weather",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "weather"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.4,
+      "position": [
+        672,
+        -16
+      ],
+      "id": "c13ca52f-9231-404e-b690-e581493ffbc3",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "url": "=https://en.wikipedia.org/w/api.php?action=query&list=geosearch&gscoord={{ $json.lat }}%7C{{ $json.lon }}&gsradius=10000&gslimit=8&format=json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "User-Agent",
+              "value": "NomadBot/1.0 (student project)"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1008,
+        0
+      ],
+      "id": "5c80c593-6e71-4926-87bf-8b8060213436",
+      "name": "Nearby Places"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "data = _items[0][\"json\"]\nrows = (data.get(\"query\") or {}).get(\"geosearch\") or []\nif not rows:\n    text = \"I couldn't find notable places nearby.\"\nelse:\n    lines = [\"Top places nearby:\"]\n    n = 0\n    for r in rows:\n        title = str(r.get(\"title\", \"\")).strip()\n        if not title:\n            continue\n        n += 1\n        dist = r.get(\"dist\")\n        km = \"\"\n        if isinstance(dist, (int, float)):\n            km = \" (\" + str(round(dist / 1000, 1)) + \" km from center)\"\n        line = str(n) + \". \" + title + km\n        pid = r.get(\"pageid\")\n        if isinstance(pid, int):\n            line = line + \"\\n   https://en.wikipedia.org/?curid=\" + str(pid)\n        lines.append(line)\n        if n >= 5:\n            break\n    text = \"\\n\".join(lines)\nreturn [{\"json\": {\"text\": text}}]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        0
+      ],
+      "id": "53cce948-7db4-4fc9-8427-99b3f7329a68",
+      "name": "Format Places"
+    },
+    {
+      "parameters": {
+        "url": "=https://api.open-meteo.com/v1/forecast?latitude={{ $json.lat }}&longitude={{ $json.lon }}&current=temperature_2m,apparent_temperature&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&forecast_days=3&timezone=auto",
+        "options": {
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        1008,
+        176
+      ],
+      "id": "e24f5f7b-634d-4d0b-b3fa-389e6b30d57b",
+      "name": "Weather Forecast"
+    },
+    {
+      "parameters": {
+        "language": "pythonNative",
+        "pythonCode": "d = _items[0][\"json\"]\ncur = d.get(\"current\") or {}\ndaily = d.get(\"daily\") or {}\ndays = daily.get(\"time\") or []\nif not cur and not days:\n    text = \"Weather data is unavailable right now.\"\nelse:\n    lines = [\"Now: \" + str(cur.get(\"temperature_2m\")) + \" C (feels like \"\n             + str(cur.get(\"apparent_temperature\")) + \" C)\", \"\", \"Next days:\"]\n    mins = daily.get(\"temperature_2m_min\") or []\n    maxs = daily.get(\"temperature_2m_max\") or []\n    rain = daily.get(\"precipitation_probability_max\") or []\n    for i in range(len(days)):\n        lo = mins[i] if i < len(mins) else \"?\"\n        hi = maxs[i] if i < len(maxs) else \"?\"\n        rp = rain[i] if i < len(rain) else \"?\"\n        lines.append(\"- \" + str(days[i]) + \": \" + str(lo) + \" to \" + str(hi)\n                     + \" C, rain chance \" + str(rp) + \"%\")\n    text = \"\\n\".join(lines)\nreturn [{\"json\": {\"text\": text}}]"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1184,
+        176
+      ],
+      "id": "5fc9cc3e-c4fd-4cb1-9681-32ba549e5a2c",
+      "name": "Format Weather"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "7ebd724d-1271-4c8f-9957-29801dd3956e",
+              "name": "text",
+              "value": "I couldn't find that city. Please check the spelling and try again.",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [
+        1008,
+        -160
+      ],
+      "id": "e7106b27-2d80-4af4-a848-77a75982b63c",
+      "name": "City Not Found"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Executed by Another Workflow": {
+      "main": [
+        [
+          {
+            "node": "Geocode City",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Geocode City": {
+      "main": [
+        [
+          {
+            "node": "Pick Place",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Pick Place": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "City Not Found",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Nearby Places",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Weather Forecast",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Nearby Places": {
+      "main": [
+        [
+          {
+            "node": "Format Places",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Weather Forecast": {
+      "main": [
+        [
+          {
+            "node": "Format Weather",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "baff7ff9-7510-45e0-b722-99fe8948efd8",
+  "meta": {
+    "instanceId": "4844245d36483eec4763d5f6a03c45480b51bb6c261b55d036d494767631f354"
+  },
+  "nodeGroups": [],
+  "id": "4md2EqNhElY6qz7w",
+  "tags": []
+}
