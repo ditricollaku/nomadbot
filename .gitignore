@@ -1,0 +1,6 @@
+# Environment variables
+.env
+# Docker volumes
+n8n_data/
+# OS files
+.DS_Store
